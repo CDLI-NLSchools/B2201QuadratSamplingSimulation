@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quadrat Sampling Data Collection Simulation</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN for visual icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .quadrat-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            grid-template-rows: repeat(4, minmax(0, 1fr));
+            gap: 6px;
+        }
+        .quadrat-cell {
+            transition: all 0.2s ease-in-out;
+        }
+        .quadrat-cell:hover {
+            transform: scale(1.02);
+            z-index: 10;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; color: black; }
+        }
+    </style>
+</head>
+<body class="h-full text-slate-800 flex flex-col min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-emerald-800 text-white shadow-md no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-emerald-700 rounded-lg">
+                    <i class="fa-solid fa-leaf text-2xl text-emerald-300"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold tracking-tight">Quadrat Sampling Simulation</h1>
+                    <p class="text-xs md:text-sm text-emerald-200">NL Biology 2201 • Unit 1: Ecology Data Collection Tool</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="resetLab()" class="px-3 py-1.5 text-xs bg-emerald-700 hover:bg-emerald-600 text-emerald-100 rounded-md transition flex items-center gap-1.5 font-medium">
+                    <i class="fa-solid fa-rotate-right"></i> Reset Simulation
+                </button>
+                <button onclick="window.print()" class="px-3 py-1.5 text-xs bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-md transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-print"></i> Print Data Table
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full space-y-6">
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Controls & Instructions Panel -->
+            <div class="lg:col-span-4 bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between space-y-5">
+                <div class="space-y-4">
+                    <div class="pb-3 border-b border-slate-100">
+                        <h2 class="font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-emerald-600"></i> Setup Parameters
+                        </h2>
+                    </div>
+
+                    <!-- Step 1: Organism Selection -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                            1. Select Organism Model
+                        </label>
+                        <select id="organismSelect" onchange="onOrganismChange()" class="w-full text-sm border-slate-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-50">
+                            <option value="beans">🫘 Black Beans (Model Organism)</option>
+                            <option value="dandelions">🌼 Dandelions (Field Plants)</option>
+                            <option value="starfish">⭐ Sea Stars (Marine Intertidal)</option>
+                            <option value="trees">🌲 Black Spruce Trees (Boreal Forest)</option>
+                        </select>
+                    </div>
+
+                    <!-- Step 2: Population Size Control -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                                2. Population Size ($N$)
+                            </label>
+                            <span id="popCountDisplay" class="text-sm font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">18</span>
+                        </div>
+                        <input type="range" id="popSizeInput" min="15" max="20" value="18" oninput="updatePopSizeDisplay(this.value)" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+                        <p class="text-[11px] text-slate-500 mt-1">Lab specification calls for 15–20 individuals.</p>
+                    </div>
+
+                    <!-- Step 3: Selection Strategy Quick Tools -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                            3. Select Sample Quadrats
+                        </label>
+                        <p class="text-xs text-slate-500 mb-2">Click quadrats on the grid map to choose manually, or use a preset below:</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="selectRandomQuadrats(5)" class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-lg border border-slate-300 transition flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-dice-five text-emerald-600"></i> Pick 5 Random
+                            </button>
+                            <button onclick="selectRandomQuadrats(10)" class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-lg border border-slate-300 transition flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-dice text-indigo-600"></i> Pick 10 Random
+                            </button>
+                        </div>
+                        <button onclick="clearSelectedQuadrats()" class="w-full mt-2 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-medium rounded-lg border border-slate-200 transition">
+                            Clear Selection
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Simulation Guide Box -->
+                <div class="p-3 bg-emerald-50 rounded-lg border border-emerald-200 text-xs text-emerald-900 space-y-1">
+                    <span class="font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-circle-info text-emerald-600"></i> Procedure Guide:
+                    </span>
+                    <ol class="list-decimal list-inside space-y-1 text-[11px]">
+                        <li>Select 5 or 10 quadrats on the map.</li>
+                        <li>Click <strong>Populate & Scatter Area</strong> below the grid.</li>
+                        <li>Record counts from your selected quadrats into your lab table.</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Interactive Study Field Display (20 Quadrats: 4 rows x 5 columns) -->
+            <div class="lg:col-span-8 bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                <div>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-100">
+                        <div>
+                            <h2 class="font-bold text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-border-all text-emerald-600"></i> Study Field Grid (20 Quadrats)
+                            </h2>
+                            <p class="text-xs text-slate-500">Quadrats must be selected prior to populating the field.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="selectedCountBadge" class="text-xs font-semibold bg-amber-100 text-amber-900 px-3 py-1 rounded-full border border-amber-300">
+                                0 / 20 Quadrats Selected
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Interactive 4x5 Grid Container -->
+                    <div id="gridContainer" class="quadrat-grid w-full aspect-[5/4] max-h-[440px] bg-slate-900 p-3 rounded-xl relative border-4 border-slate-800 shadow-inner overflow-hidden">
+                        <!-- Dynamic Quadrat Cells generated via JS -->
+                    </div>
+
+                    <!-- Grid Legend and Status Indicator -->
+                    <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs pt-2 border-t border-slate-100">
+                        <div class="flex items-center gap-4">
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-3.5 h-3.5 rounded border-2 border-slate-600 bg-slate-800 inline-block"></span>
+                                <span class="text-slate-600">Unselected Quadrat</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-3.5 h-3.5 rounded border-2 border-amber-400 bg-amber-500/30 inline-block"></span>
+                                <span class="text-slate-700 font-semibold">Selected Sample Quadrat</span>
+                            </div>
+                        </div>
+
+                        <div id="fieldStatusTag" class="text-xs font-semibold px-2.5 py-1 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                            Status: Field Unpopulated
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Disperse Action Button (Positioned directly below quadrats & legend) -->
+                <div class="mt-5 pt-3 border-t border-slate-100">
+                    <button id="btnPopulate" onclick="populateStudyArea()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-base rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Populate & Scatter Area
+                    </button>
+                    <p id="populateStatusMsg" class="text-[11px] text-center text-slate-500 mt-1.5 font-medium">
+                        Select your quadrats on the grid above first, then click here to populate the area.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Collection Table Panel -->
+        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-4 border-b border-slate-100">
+                <div>
+                    <h3 class="font-bold text-slate-900 flex items-center gap-2 text-base">
+                        <i class="fa-solid fa-table text-emerald-600"></i> Sample Data Collection Table
+                    </h3>
+                    <p class="text-xs text-slate-500">Record counts for your chosen quadrats into your physical lab report.</p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleTableFilter('selected')" id="filterSelectedBtn" class="px-3 py-1.5 bg-emerald-100 text-emerald-800 font-semibold text-xs rounded-lg border border-emerald-300 transition">
+                        Show Selected Quadrats Only
+                    </button>
+                    <button onclick="toggleTableFilter('all')" id="filterAllBtn" class="px-3 py-1.5 bg-slate-100 text-slate-700 font-medium text-xs rounded-lg border border-slate-200 transition">
+                        Show All 20 Quadrats
+                    </button>
+                    <button onclick="copyTableToClipboard()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-medium text-xs rounded-lg transition flex items-center gap-1">
+                        <i class="fa-regular fa-copy"></i> Copy Data
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                <table id="dataTable" class="w-full text-left text-xs">
+                    <thead class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                        <tr>
+                            <th class="p-2.5 border-r w-28">Quadrat #</th>
+                            <th class="p-2.5 border-r w-40">Sampled Status</th>
+                            <th class="p-2.5 border-r w-36">Organism Count ($n_i$)</th>
+                            <th class="p-2.5">Notes / Visual Indicator</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody" class="divide-y divide-slate-100 text-slate-700">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="copyFeedback" class="mt-2 text-xs font-semibold text-emerald-700 hidden">
+                <i class="fa-solid fa-check-circle"></i> Table data copied to clipboard!
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-4 border-t border-slate-800 text-xs no-print mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p>NL Biology 2201 • Unit 1 Ecology • Quadrat Population Sampling Data Collection Tool</p>
+        </div>
+    </footer>
+
+    <!-- Custom JavaScript Engine -->
+    <script>
+        // Global Application State
+        const TOTAL_QUADRATS = 20;
+        let populationSize = 18;
+        let organismType = 'beans';
+        let quadCounts = new Array(TOTAL_QUADRATS).fill(0);
+        let selectedQuadrats = new Set();
+        let isPopulated = false;
+        let tableFilterMode = 'selected'; // 'selected' or 'all'
+
+        // Emoji icons mapping for organisms
+        const organismIcons = {
+            beans: '🫘',
+            dandelions: '🌼',
+            starfish: '⭐',
+            trees: '🌲'
+        };
+
+        const organismNames = {
+            beans: 'Black Beans',
+            dandelions: 'Dandelions',
+            starfish: 'Sea Stars',
+            trees: 'Black Spruce Trees'
+        };
+
+        // Window load initialization
+        window.onload = function() {
+            renderGrid();
+            renderTable();
+        };
+
+        function updatePopSizeDisplay(val) {
+            populationSize = parseInt(val);
+            document.getElementById('popCountDisplay').innerText = val;
+            if (isPopulated) {
+                // Re-populate if already dispersed
+                populateStudyArea();
+            }
+        }
+
+        function onOrganismChange() {
+            organismType = document.getElementById('organismSelect').value;
+            renderGrid();
+            renderTable();
+        }
+
+        function toggleQuadratSelection(quadNum) {
+            if (selectedQuadrats.has(quadNum)) {
+                selectedQuadrats.delete(quadNum);
+            } else {
+                selectedQuadrats.add(quadNum);
+            }
+            renderGrid();
+            renderTable();
+        }
+
+        function selectRandomQuadrats(count) {
+            selectedQuadrats.clear();
+            const available = Array.from({length: TOTAL_QUADRATS}, (_, i) => i + 1);
+            
+            // Fisher-Yates shuffle
+            for (let i = available.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [available[i], available[j]] = [available[j], available[i]];
+            }
+
+            for (let k = 0; k < count; k++) {
+                selectedQuadrats.add(available[k]);
+            }
+
+            renderGrid();
+            renderTable();
+        }
+
+        function clearSelectedQuadrats() {
+            selectedQuadrats.clear();
+            renderGrid();
+            renderTable();
+        }
+
+        function populateStudyArea() {
+            quadCounts = new Array(TOTAL_QUADRATS).fill(0);
+
+            // Randomly disperse population across all 20 quadrats
+            for (let i = 0; i < populationSize; i++) {
+                const randomQuad = Math.floor(Math.random() * TOTAL_QUADRATS);
+                quadCounts[randomQuad]++;
+            }
+
+            isPopulated = true;
+
+            // Update UI elements
+            const statusTag = document.getElementById('fieldStatusTag');
+            statusTag.className = "text-xs font-semibold px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 border border-emerald-300";
+            statusTag.innerText = "Status: Area Populated & Scattered";
+
+            const populateBtn = document.getElementById('btnPopulate');
+            populateBtn.innerHTML = `<i class="fa-solid fa-arrows-rotate"></i> Re-scatter Population`;
+
+            renderGrid();
+            renderTable();
+        }
+
+        function renderGrid() {
+            const container = document.getElementById('gridContainer');
+            container.innerHTML = '';
+
+            for (let i = 0; i < TOTAL_QUADRATS; i++) {
+                const quadNum = i + 1;
+                const isSelected = selectedQuadrats.has(quadNum);
+                const count = quadCounts[i];
+
+                const cell = document.createElement('div');
+                cell.id = `quad-cell-${quadNum}`;
+                cell.onclick = () => toggleQuadratSelection(quadNum);
+                
+                cell.className = `quadrat-cell relative rounded-lg p-2 flex flex-col justify-between cursor-pointer border-2 transition-all ${
+                    isSelected 
+                        ? 'bg-amber-500/20 border-amber-400 shadow-md ring-2 ring-amber-400/50' 
+                        : 'bg-slate-800/90 border-slate-700 hover:border-emerald-500 hover:bg-slate-800'
+                }`;
+
+                // Header in quadrat cell
+                const header = document.createElement('div');
+                header.className = 'flex justify-between items-center w-full text-xs text-slate-300 font-bold';
+                header.innerHTML = `<span>Quadrat ${quadNum}</span> ${isSelected ? '<span class="text-amber-400 bg-amber-900/60 px-1.5 py-0.5 rounded text-[10px] font-semibold"><i class="fa-solid fa-check"></i> Sampled</span>' : ''}`;
+                cell.appendChild(header);
+
+                // Organisms display area
+                const organismBox = document.createElement('div');
+                organismBox.className = 'flex flex-wrap items-center justify-center gap-1 my-1 min-h-[40px] overflow-hidden';
+
+                if (isPopulated) {
+                    const icon = organismIcons[organismType] || '🫘';
+                    for (let c = 0; c < count; c++) {
+                        const item = document.createElement('span');
+                        item.className = 'text-sm select-none transform hover:scale-125 transition-transform';
+                        item.title = `${organismNames[organismType]} in Quadrat ${quadNum}`;
+                        item.innerText = icon;
+                        organismBox.appendChild(item);
+                    }
+                } else {
+                    const placeholder = document.createElement('span');
+                    placeholder.className = 'text-[10px] text-slate-500 italic select-none';
+                    placeholder.innerText = 'Unpopulated';
+                    organismBox.appendChild(placeholder);
+                }
+                cell.appendChild(organismBox);
+
+                // Footer count indicator
+                const footer = document.createElement('div');
+                footer.className = 'text-right text-[11px] font-semibold text-slate-400';
+                footer.innerText = isPopulated ? `Count: ${count}` : 'n = --';
+                cell.appendChild(footer);
+
+                container.appendChild(cell);
+            }
+
+            // Update badge count
+            const badge = document.getElementById('selectedCountBadge');
+            badge.innerText = `${selectedQuadrats.size} / 20 Quadrats Selected`;
+        }
+
+        function toggleTableFilter(mode) {
+            tableFilterMode = mode;
+            const selBtn = document.getElementById('filterSelectedBtn');
+            const allBtn = document.getElementById('filterAllBtn');
+
+            if (mode === 'selected') {
+                selBtn.className = "px-3 py-1.5 bg-emerald-100 text-emerald-800 font-semibold text-xs rounded-lg border border-emerald-300 transition";
+                allBtn.className = "px-3 py-1.5 bg-slate-100 text-slate-700 font-medium text-xs rounded-lg border border-slate-200 transition";
+            } else {
+                allBtn.className = "px-3 py-1.5 bg-emerald-100 text-emerald-800 font-semibold text-xs rounded-lg border border-emerald-300 transition";
+                selBtn.className = "px-3 py-1.5 bg-slate-100 text-slate-700 font-medium text-xs rounded-lg border border-slate-200 transition";
+            }
+
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('dataTableBody');
+            tbody.innerHTML = '';
+
+            let listToDisplay = [];
+            if (tableFilterMode === 'selected') {
+                listToDisplay = Array.from(selectedQuadrats).sort((a,b) => a - b);
+            } else {
+                listToDisplay = Array.from({length: TOTAL_QUADRATS}, (_, i) => i + 1);
+            }
+
+            if (listToDisplay.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400 italic">No quadrats selected yet. Select quadrats on the field map above to collect data.</td></tr>`;
+                return;
+            }
+
+            const icon = organismIcons[organismType] || '🫘';
+
+            listToDisplay.forEach(quadNum => {
+                const isSelected = selectedQuadrats.has(quadNum);
+                const count = isPopulated ? quadCounts[quadNum - 1] : '--';
+
+                const tr = document.createElement('tr');
+                tr.className = isSelected ? 'bg-amber-50/60 hover:bg-amber-100/60' : 'hover:bg-slate-50';
+
+                let visualIconsStr = '';
+                if (isPopulated && count !== '--') {
+                    visualIconsStr = icon.repeat(count);
+                }
+
+                tr.innerHTML = `
+                    <td class="p-2.5 border-r font-bold text-slate-800">Quadrat ${quadNum}</td>
+                    <td class="p-2.5 border-r font-medium">
+                        ${isSelected 
+                            ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded font-semibold text-[11px]"><i class="fa-solid fa-check"></i> Sampled</span>' 
+                            : '<span class="text-slate-400 text-[11px]">Not Sampled</span>'}
+                    </td>
+                    <td class="p-2.5 border-r font-bold ${isPopulated ? 'text-emerald-700' : 'text-slate-400'}">
+                        ${count}
+                    </td>
+                    <td class="p-2.5 text-xs text-slate-500">
+                        ${isPopulated ? `<span class="tracking-widest">${visualIconsStr}</span>` : '<span class="italic text-slate-400">Populate area to reveal</span>'}
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function copyTableToClipboard() {
+            let copyText = "Quadrat #\tSampled Status\tCount (n)\n";
+            for (let i = 1; i <= TOTAL_QUADRATS; i++) {
+                const isSelected = selectedQuadrats.has(i);
+                if (tableFilterMode === 'selected' && !isSelected) continue;
+                
+                const count = isPopulated ? quadCounts[i - 1] : "N/A";
+                copyText += `Quadrat ${i}\t${isSelected ? "Sampled" : "Not Sampled"}\t${count}\n`;
+            }
+
+            const textarea = document.createElement('textarea');
+            textarea.value = copyText;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+
+            const feedback = document.getElementById('copyFeedback');
+            feedback.classList.remove('hidden');
+            setTimeout(() => {
+                feedback.classList.add('hidden');
+            }, 3000);
+        }
+
+        function resetLab() {
+            selectedQuadrats.clear();
+            quadCounts = new Array(TOTAL_QUADRATS).fill(0);
+            isPopulated = false;
+
+            const statusTag = document.getElementById('fieldStatusTag');
+            statusTag.className = "text-xs font-semibold px-2.5 py-1 rounded bg-slate-100 text-slate-600 border border-slate-200";
+            statusTag.innerText = "Status: Field Unpopulated";
+
+            const populateBtn = document.getElementById('btnPopulate');
+            populateBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> 4. Populate & Scatter Area`;
+
+            renderGrid();
+            renderTable();
+        }
+    </script>
+</body>
+</html>
